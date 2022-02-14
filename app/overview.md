@@ -1,14 +1,20 @@
 <script>
 let style = document.createElement('style');
 style.append(document.createTextNode(`
-.basic { 
+table.basic { 
   border-collapse: collapse;
   border: 1px solid black;
   margin-top: 0.5em;
 }
-.basic th, .basic td {
+table.basic th, .basic td {
   border: 1px solid black;
   padding: 0.2em;
+}
+tr.no-td-border td {
+  border: none;
+}
+table.basic td span {
+  padding: 0.4em;
 }
 `));
 document.head.append(style);
@@ -134,7 +140,7 @@ return a single position as a result, but a span of positions.
 
 The way a phrase query matches can obviously be changed. Near-queries are much
 like phrase queries, but rather than having a condition such as
-`x + 1 = y`, they have a condition such as `|x - y| < 5` meaning the near-query
+`x + 1 = y`, they have a condition such as `|y - x| < 5` meaning the near-query
 will match if the two words are within 5 positions. In Lucene/Solr, this is
 written with the query syntax `"x y"~5`.
 
@@ -167,8 +173,30 @@ written with the query syntax `"x y"~5`.
   <td rowspan="3">"patient chest pain"</td>
   <td>patient</td>
   <td>x &isin; {2, 7}</td>
-  <td rowspan="3">{ (x, y, z) | x + 1 = y &and; y + 1 = z }</td>
+  <td rowspan="3">
+{ (x, y, z) | <span>x + 1 = y</span> 
+&and; <span>y + 1 = z</span>
+}</td>
   <td rowspan="3"><i>no results</i></td>
+</tr>
+<tr>
+  <td>chest</td>
+  <td>y &isin; {4, 12}</td>
+</tr>
+<tr>
+  <td>pain</td>
+  <td>z &isin; {5, 9}</td>
+</tr>
+<tr>
+  <td rowspan="3">"patient chest pain"~5</td>
+  <td>patient</td>
+  <td>x &isin; {2, 7}</td>
+  <td rowspan="3">
+{ (x, y, z) | <span>|y - x| &lt; 5</span>
+&and; <span>|z - y| &lt; 5</span> 
+&and; <span>|z - x| &lt; 5</span>
+}</td>
+  <td rowspan="3">(2, 4 ,5), (7, 4, 9)</td>
 </tr>
 <tr>
   <td>chest</td>
@@ -191,3 +219,203 @@ multiple tokens at the same position. This leads to a natural way of encoding
 searchable metadata about tokens: encode such metadata as special tokens rooted
 at the same position of the token they are describing.
 
+<table class="basic">
+<caption><i>"Patient denies chest pain."</i></caption>
+<thead>
+<tr><th>Token Text</th><th>Position</th><th>Offsets</th></tr>
+</thead>
+<tbody>
+<tr><td>patient</td> <td>1</td> <td>0-7  </td></tr>
+<tr><td>denies </td> <td>2</td> <td>8-14 </td></tr>
+<tr><td>chest  </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>NEG    </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>pain   </td> <td>4</td> <td>21-25</td></tr>
+<tr><td>NEG    </td> <td>4</td> <td>21-25</td></tr>
+</tbody>
+</table>
+
+Here, we have output two additional tokens, positioned at the same place as the
+words "chest pain" to indicate these words are negated. A search for
+"chest" or "pain" would work as before, but we can devise another type of query
+which would exclude words which are marked as negated. Lucene/Solr calls these
+queries "span-not" queries, but has no default syntax to invoke them. I shall
+make up the syntax `x - y` to indicate the use of such. Span-not queries can be
+combined with phrase queries or near queries. The "span conditions" I wrote
+below are hand-made to make sense for the intent of the query, but there are
+methodical ways to execute such queries. See the {@link
+org.emerse.index.query.Queries Queries} class for more detail.
+
+<table class="basic">
+<caption>Queries on <i>"Patient denies chest pain."</i></caption>
+<thead>
+<tr>
+<th>Query</th>
+<th>Terms in Query</th>
+<th>Found Positions</th>
+<th>Span Condition</th>
+<th>Matching Spans</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td rowspan="2">pain - NEG</td>
+  <td>pain</td>
+  <td>x &isin; {4}</td>
+  <td rowspan="2">{ x | &not;&exist;y (x = y) }</td>
+  <td rowspan="2"><i>no results</i></td>
+</tr>
+<tr>
+  <td>NEG</td>
+  <td>y &isin; {4, 5}</td>
+</tr>
+<tr>
+  <td rowspan="3">"chest pain" - NEG</td>
+  <td>chest</td>
+  <td>x &isin; {4}</td>
+  <td rowspan="3">{ (x, y) | <span>x + 1 = y</span>
+&and; <span>&not;&exist;z (x = z &or; y = z)</span> }</td>
+  <td rowspan="3"><i>no results</i></td>
+</tr>
+<tr>
+  <td>pain</td>
+  <td>y &isin; {5}</td>
+</tr>
+<tr>
+  <td>NEG</td>
+  <td>z &isin; {4,5}</td>
+</tr>
+</tbody>
+</table>
+
+There is one issue metadata-tokens: we need a reliable way to distinguish
+metadata-tokens from tokens representing the text itself. Here, we assumed we
+were lower-casing and stemming words to make tokens, so no word could ever end
+up as the upper-case token NEG. However, in the real world, we would like to
+also support case-sensitive search as well, in which case we cannot rely on the
+case of tokens to distinguish them as metadata or not.
+
+To solve this in general, we can prefix _all_ tokens with a kind of "class" or
+"layer". We can have many "layers" to our tokens:
+
+1. a case-sensitive layer, which preserves all information about the word
+2. a case-insensitive layer, which lower-cases the word, and stems it
+3. a negation layer, which contains an indication if the word is negated
+4. an entity layer, which contains an indication if the word refers to an entity
+
+Thus, we can visualize a tokenization of a sentence like so:
+
+<table class="basic">
+<caption>Visualization of tokenization of <i>"Patient denies chest pain"</i></caption>
+<thead>
+</thead>
+<tbody>
+<tr class="no-td-border">
+<th></th>
+<th>Sentence</th>
+<td>Patient</td>
+<td>denies</td>
+<td>chest</td>
+<td>pain</td>
+</tr>
+<tr>
+<th rowspan="2">Common Token Attribues</th>
+<th>Position</th>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+</tr>
+<tr>
+<th>Offsets</th>
+<td>0-7</td>
+<td>8-14</td>
+<td>15-20</td>
+<td>21-25</td>
+</tr>
+<tr>
+<th rowspan="4">Tokens</th>
+<th>Case Sensitive</th>
+<td>CS_Patient</td>
+<td>CS_denies</td>
+<td>CS_chest</td>
+<td>CS_pain</td>
+</tr>
+<tr>
+<th>Case Insensitive</th>
+<td>CI_patient</td>
+<td>CI_deny</td>
+<td>CI_chest</td>
+<td>CI_pain</td>
+</tr>
+<tr>
+<th>Negation</th>
+<td></td>
+<td></td>
+<td>N_NEG</td>
+<td>N_NEG</td>
+</tr>
+<tr>
+<th>ICD-10</th>
+<td></td>
+<td></td>
+<td>ICD10_R07.9</td>
+<td>ICD10_R07.9</td>
+</tr>
+</tbody>
+</table>
+
+<table class="basic">
+<caption>Actual token stream of <i>"Patient denies chest pain"</i></caption>
+<thead>
+<tr><th>Token Text</th><th>Position</th><th>Offsets</th></tr>
+</thead>
+<tbody>
+<tr><td>CS_Patient  </td> <td>1</td> <td>0-7  </td></tr>
+<tr><td>CI_patient  </td> <td>1</td> <td>0-7  </td></tr>
+<tr><td>CS_denies   </td> <td>2</td> <td>8-14 </td></tr>
+<tr><td>CI_deny     </td> <td>2</td> <td>8-14 </td></tr>
+<tr><td>CS_chest    </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>CI_chest    </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>N_NEG       </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>ICD10_R07.9 </td> <td>3</td> <td>15-20</td></tr>
+<tr><td>CS_pain     </td> <td>4</td> <td>21-25</td></tr>
+<tr><td>CI_pain     </td> <td>4</td> <td>21-25</td></tr>
+<tr><td>N_NEG       </td> <td>4</td> <td>21-25</td></tr>
+<tr><td>ICD10_R07.9 </td> <td>4</td> <td>21-25</td></tr>
+</tbody>
+</table>
+
+With this tokenization, a query for "Patient" would return nothing. All tokens
+have a prefix, so the token you search for must also have a prefix. If you wish
+to match the text "Patient" exactly, you must search for "CS_Patient". If you
+don't care how the word is cased or conjugated, search for "CI_patient".
+
+Obviously, it isn't reasonable to expect an end-user of a search system
+to know the these kinds of intricacies. There are two solutions to this problem.
+1. Use a complex UI to allow the user to specify their intent, 
+   then generate the correct query for them
+2. Use query-expansion to guess at their intent
+
+A complex UI may be difficult to use and understand, but then users should
+have a better understanding of what the system is doing, and can be used
+to get more accurate results with increased understanding and competence.
+Using query-expansion preserves a very simple UI (such as just typing in 
+what you are looking for such as in any standard web-search engine), but
+doesn't necessarily produce the best query for the user's intent, and 
+can't be refined necessarily, except by possibly opting-out of query
+expansion and specifying the exact query syntax.
+
+<table class="basic">
+<caption>Queries</caption>
+<thead>
+<th>Attempted Query</th>
+<th>Intent</th>
+<th>Correct Query</th>
+<th>Possible result of query-expansion</th>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
