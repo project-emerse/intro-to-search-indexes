@@ -1,0 +1,10 @@
+repositories {
+    maven {
+        setUrl("https://plugins.gradle.org/m2/")
+    }
+}
+
+dependencies {
+    gradleApi()
+    api "com.atlassian.commonmark:commonmark:0.17.0"
+}

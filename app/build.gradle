@@ -1,0 +1,23 @@
+import org.emerse.gradle.AllJavadoc
+
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+testing {
+    suites {
+        test {
+            useJUnitJupiter('5.7.2')
+        }
+    }
+}
+
+
+tasks.register('alljavadoc', AllJavadoc)
