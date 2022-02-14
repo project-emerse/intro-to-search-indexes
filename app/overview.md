@@ -10,6 +10,9 @@ table.basic th, .basic td {
   border: 1px solid black;
   padding: 0.2em;
 }
+.comment {
+  max-width: 30ex;
+}
 tr.no-td-border td {
   border: none;
 }
@@ -390,32 +393,64 @@ have a prefix, so the token you search for must also have a prefix. If you wish
 to match the text "Patient" exactly, you must search for "CS_Patient". If you
 don't care how the word is cased or conjugated, search for "CI_patient".
 
-Obviously, it isn't reasonable to expect an end-user of a search system
-to know the these kinds of intricacies. There are two solutions to this problem.
-1. Use a complex UI to allow the user to specify their intent, 
-   then generate the correct query for them
+Obviously, it isn't reasonable to expect an end-user of a search system to know
+the these kinds of intricacies. There are two solutions to this problem.
+
+1. Use a complex UI to allow the user to specify their intent, then generate the
+   correct query for them
 2. Use query-expansion to guess at their intent
 
-A complex UI may be difficult to use and understand, but then users should
-have a better understanding of what the system is doing, and can be used
-to get more accurate results with increased understanding and competence.
-Using query-expansion preserves a very simple UI (such as just typing in 
-what you are looking for such as in any standard web-search engine), but
-doesn't necessarily produce the best query for the user's intent, and 
-can't be refined necessarily, except by possibly opting-out of query
-expansion and specifying the exact query syntax.
+A complex UI may be difficult to use and understand, but then users should have
+a better understanding of what the system is doing, and it can be used to get
+more accurate results if the user does understand it. Query-expansion allows you
+to have a very simple UI (such as search bar to enter text), but doesn't
+necessarily produce the best query for the user's intent, and can't be refined
+necessarily, except by possibly opting-out of query expansion and specifying the
+exact query syntax.  Obviously, a combination of approaches can be used as well
+to cater to different users and use cases.
 
 <table class="basic">
 <caption>Queries</caption>
 <thead>
+<tr>
 <th>Attempted Query</th>
 <th>Intent</th>
 <th>Correct Query</th>
-<th>Possible result of query-expansion</th>
+<th>Possible query-expansion</th>
+<th>Comments</th>
+</tr>
 </thead>
 <tbody>
 <tr>
-<td></td>
+<td>Patients</td>
+<td class="comment">Find the exact word "Patients"</td>
+<td>CS_Patients</td>
+<td>CI_patient</td>
+<td class="comment">Query expansion would probably never guess exact searches</td>
+</tr>
+<tr>
+<td>ALL</td>
+<td class="comment">Find positive diagnoses of acute lymphoblastic leukemia</td>
+<td>ICD10_C91.0 - N_NEG</td>
+<td>CI_all</td>
+<td class="comment">
+Query expansion is unlikely to guess the diagnosis code 
+since "all" is a common word
+</td>
+</tr>
+<tr>
+<td>C91.0</td>
+<td class="comment">Find positive diagnoses of acute lymphoblastic leukemia</td>
+<td>ICD10_C91.0 - N_NEG</td>
+<td><span>ICD10_C91.0</span> <span>CI_c91.0</span></td>
+<td class="comment">
+The query-expansion could reasonably recognize the ICD-10 code when typed in.
+However, it probably would not include the "- N_NEG",
+since query-expansion can't know the user isn't searching for explicit
+documentation of ruling out of ALL.
+Query-expansion also can't rule out that the user may be looking
+for that word in the text itself, so it can search for it too.
+</td>
 </tr>
 </tbody>
 </table>
