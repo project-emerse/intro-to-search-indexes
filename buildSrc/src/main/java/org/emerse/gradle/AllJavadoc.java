@@ -108,7 +108,7 @@ public class AllJavadoc extends Exec
 			"-overview",
 			overviewHtml.toString(),
 			"-doctitle",
-			"Index Example",
+			"An Introduction to Search Indexes",
 			"-quiet",
 			"-Xdoclint:all,-missing",
 			"--allow-script-in-comments",

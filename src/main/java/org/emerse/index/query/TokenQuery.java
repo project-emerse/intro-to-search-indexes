@@ -7,28 +7,28 @@ import java.util.*;
 
 public class TokenQuery implements Query
 {
-	private final String term;
+	private final String token;
 	private List<Posting> postings;
 	private int postingIndex;
-	private int positionsIndex;
+	private int spanIndex;
 
-	public TokenQuery(String term)
+	public TokenQuery(String token)
 	{
-		this.term = term;
+		this.token = token;
 	}
 
 	@Override
 	public void execute(Index index)
 	{
-		postings = index.lookup(term);
+		postings = index.lookup(token);
 		postingIndex = -1;
 	}
 
 	@Override
 	public boolean nextDoc()
 	{
-		positionsIndex = -1;
-		return ++positionsIndex < postings.size();
+		spanIndex = -1;
+		return ++postingIndex < postings.size();
 	}
 
 	@Override
@@ -41,13 +41,13 @@ public class TokenQuery implements Query
 	public boolean nextSpan()
 	{
 		var positions = postings.get(postingIndex).positions;
-		return ++positionsIndex < positions.size();
+		return ++spanIndex < positions.size();
 	}
 
 	@Override
 	public int startPosition()
 	{
-		return postings.get(postingIndex).positions.get(positionsIndex);
+		return postings.get(postingIndex).positions.get(spanIndex);
 	}
 
 	@Override
@@ -59,12 +59,12 @@ public class TokenQuery implements Query
 	@Override
 	public int startOffset()
 	{
-		return postings.get(postingIndex).offsets.get(positionsIndex * 2);
+		return postings.get(postingIndex).offsets.get(spanIndex * 2);
 	}
 
 	@Override
 	public int endOffset()
 	{
-		return postings.get(postingIndex).offsets.get(positionsIndex * 2 + 1);
+		return postings.get(postingIndex).offsets.get(spanIndex * 2 + 1);
 	}
 }

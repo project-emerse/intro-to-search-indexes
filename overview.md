@@ -138,14 +138,8 @@ So far, we've only talked about querying for a single token, but there are
 compound queries built out of this basic operation, such as phrase queries,
 often written in double-quotes. Searching for the phrase "chest pain", the index
 would first look up each individual word, then try to match the returned
-positions to see if two positions are adjacent. The query then just doesn't
-return a single position as a result, but a span of positions.
-
-The way a phrase query matches can obviously be changed. Near-queries are much
-like phrase queries, but rather than having a condition such as
-`x + 1 = y`, they have a condition such as `|y - x| < 5` meaning the near-query
-will match if the two words are within 5 positions. In Lucene/Solr, this is
-written with the query syntax `"x y"~5`.
+positions to see if two positions are adjacent. The query then returns a span of
+positions instead of a single position.
 
 <table class="basic">
 <caption>Queries on 
@@ -199,7 +193,7 @@ written with the query syntax `"x y"~5`.
 &and; <span>|z - y| &lt; 5</span> 
 &and; <span>|z - x| &lt; 5</span>
 }</td>
-  <td rowspan="3">(2, 4 ,5), (7, 4, 9)</td>
+  <td rowspan="3">(2, 4 ,5), (7, 4, 5), (7, 4, 9), (7, 12, 9)</td>
 </tr>
 <tr>
   <td>chest</td>
@@ -212,12 +206,18 @@ written with the query syntax `"x y"~5`.
 </tbody>
 </table>
 
+The way a phrase query matches can obviously be changed. Near-queries are much
+like phrase queries, but rather than having a condition such as
+`x + 1 = y`, they have a condition such as `|y - x| < 5` meaning the near-query
+will match if the two words are within 5 positions. In Lucene/Solr, this is
+written with the query syntax `"x y"~5`.
+
 # Adding Metadata as Tokens
 
-If near-queries can match tokens that are within some distance of one another
-that distance could be zero, meaning the two tokens are at the _same_ position.
-So far, we haven't generated any two tokens at the same position, so such a
-capability in a query isn't useful yet, but there is no reason we can't produce
+If near-queries can match tokens that are within some distance of one another,
+then that distance could be zero, meaning the two tokens are at the _same_
+position. So far, we haven't generated two tokens at the same position, so such
+a querying capability isn't useful yet, but there is no reason we can't produce
 multiple tokens at the same position. This leads to a natural way of encoding
 searchable metadata about tokens: encode such metadata as special tokens rooted
 at the same position of the token they are describing.
@@ -406,7 +406,7 @@ more accurate results if the user does understand it. Query-expansion allows you
 to have a very simple UI (such as search bar to enter text), but doesn't
 necessarily produce the best query for the user's intent, and can't be refined
 necessarily, except by possibly opting-out of query expansion and specifying the
-exact query syntax.  Obviously, a combination of approaches can be used as well
+exact query syntax. Obviously, a combination of approaches can be used as well
 to cater to different users and use cases.
 
 <table class="basic">

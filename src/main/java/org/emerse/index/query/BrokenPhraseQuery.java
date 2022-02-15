@@ -10,25 +10,25 @@ public class BrokenPhraseQuery extends ConjunctionQuery
 	@Override
 	public boolean nextSpan()
 	{
-		var leftPos = -2;// the end position of the left span
-		var rightPos = -1;// the start position of right span
-		while (leftPos != rightPos)
+		var leftSpanEnd = -2;
+		var rightSpanStart = -1;
+		while (leftSpanEnd != rightSpanStart)
 		{
-			while (leftPos < rightPos)
+			while (leftSpanEnd < rightSpanStart)
 			{
 				if (!left.nextSpan())
 				{
 					return false;
 				}
-				leftPos = left.endPosition();
+				leftSpanEnd = left.endPosition();
 			}
-			while (rightPos < leftPos)
+			while (rightSpanStart < leftSpanEnd)
 			{
 				if (!right.nextSpan())
 				{
 					return false;
 				}
-				rightPos = right.startPosition();
+				rightSpanStart = right.startPosition();
 			}
 		}
 		return true;
