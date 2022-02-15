@@ -93,10 +93,10 @@ standard form, often by lower-casing and stemming.
 </thead>
 <tbody>
 <tr><td>the     </td> <td>1</td> <td>0-3  </td></tr>
-<tr><td>patient </td> <td>2</td> <td>4-11 </td></tr>
-<tr><td>deny    </td> <td>3</td> <td>12-16</td></tr>
-<tr><td>chest   </td> <td>4</td> <td>17-22</td></tr>
-<tr><td>pain    </td> <td>5</td> <td>23-27</td></tr>
+<tr><td>patient </td> <td>2</td> <td>4-12 </td></tr>
+<tr><td>deny    </td> <td>3</td> <td>13-17</td></tr>
+<tr><td>chest   </td> <td>4</td> <td>18-23</td></tr>
+<tr><td>pain    </td> <td>5</td> <td>24-28</td></tr>
 </tbody>
 </table>
 
