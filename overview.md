@@ -1,28 +1,3 @@
-<script>
-let style = document.createElement('style');
-style.append(document.createTextNode(`
-table.basic { 
-  border-collapse: collapse;
-  border: 1px solid black;
-  margin-top: 0.5em;
-}
-table.basic th, .basic td {
-  border: 1px solid black;
-  padding: 0.2em;
-}
-.comment {
-  max-width: 30ex;
-}
-tr.no-td-border td {
-  border: none;
-}
-table.basic td span {
-  padding: 0.4em;
-}
-`));
-document.head.append(style);
-</script>
-
 There are three major processes related to a search index:
 
 1. tokenization,

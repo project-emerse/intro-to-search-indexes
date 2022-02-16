@@ -49,17 +49,17 @@ public final class Queries
 		return new TwoPartQueryFix(new BrokenOverlapQuery(base, overlap));
 	}
 
-	public Query noOverlap(Query base, Query exclude)
+	public static Query noOverlap(Query base, Query exclude)
 	{
 		return new TwoPartQueryFix(new BrokenNoOverlapQuery(base, exclude));
 	}
 
-	public Query phrase(Query left, Query right)
+	public static Query phrase(Query left, Query right)
 	{
 		return new TwoPartQueryFix(new BrokenPhraseQuery(left, right));
 	}
 
-	public Query phrase(Query... parts)
+	public static Query phrase(Query... parts)
 	{
 		var l = parts.length;
 		for (var halfSpan = 1; halfSpan < l; halfSpan *= 2)
